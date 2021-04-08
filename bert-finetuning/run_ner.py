@@ -219,7 +219,11 @@ def main():
         label_list.sort()
         return label_list
 
-    if isinstance(features[label_column_name].feature, ClassLabel):
+    # features[label_column_name] will be different for json and csv files:
+    # json files: Sequence(feature=Value(dtype='string', id=None), length=-1, id=None)
+    # csv files: Value(dtype='string', id=None)
+    if hasattr(features[label_column_name], 'feature') and isinstance(features[label_column_name].feature, ClassLabel):
+    #if isinstance(features[label_column_name].feature, ClassLabel):
         label_list = features[label_column_name].feature.names
         # No need to convert the labels since they are already ints.
         label_to_id = {i: i for i in range(len(label_list))}
