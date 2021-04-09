@@ -16,7 +16,7 @@ def publications_cleaned_sentences_json(path):
     """Check for all publications in the given folder, split the texts by sentences
     Writes a jsonl file with keys: Id, section_title, sentence, tokens
     """
-    publications = data_path.iterdir()
+    publications = path.iterdir()
     rows = []
     for ppath in publications:
         row = {'Id': Path(ppath).stem}
