@@ -31,7 +31,9 @@ def publications_cleaned_sentences_json(path):
                 row['sentence'] = sentence
                 row['tokens'] = sentence.split()
                 rows.append(row.copy())
-    pd.DataFrame(rows).to_json('sentences.json', orient='records', lines=True)
+    df = pd.DataFrame(rows)
+    df['ner_tags'] = df['tokens'].apply(lambda x: ["O"]*len(x)) # add dummy column of ner_tags to match train.json format
+    df.to_json('sentences.json', orient='records', lines=True)
 
 #%%
 def predictions_to_array(preds_df):
