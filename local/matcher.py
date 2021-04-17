@@ -9,9 +9,10 @@ import spacy
 from spacy.matcher import PhraseMatcher
 from tqdm import tqdm
 #%%
+iob_map = {0: "", 1: "I-D", 2: "O", 3: "B-D"}
 def publication_iob(publication_path, dataset_labels):
     """Tokenize and find occurrences of dataset_labels in the publication texts.
-    output: jsonl of the publication with keys 'section_title', 'tokens', 'ner_tags' (IOB2)
+    output: jsonl of the publication with keys 'Id', 'section_title', 'sentence', 'tokens', 'ner_tags' (IOB2)
     """
     nlp = spacy.load("en_core_web_sm")
     nlp.select_pipes(enable='')
@@ -30,20 +31,22 @@ def publication_iob(publication_path, dataset_labels):
             doc = nlp(sentence)
             entry['sentence'] = doc.text
             entry['tokens'] = [token.text for token in doc]
-            entry['ner_tags'] = doc.to_array('ENT_IOB')
+            entry['ner_tags'] = list(map(iob_map.get, doc.to_array("ENT_IOB").tolist()))
             output.append(entry.copy())
     return output
 # With "Beginning Postsecondary Student" and "Beginning Postsecondary Students" as matching terms
-# and the same two strings in the text, spacy reports 2 matching (but we could expect 3), 
-# but with "Beginning Postsecondary Student" and "Beginning Postsecondary" as matching terms, spacy reports 4 matching (but we could expect 2 like above).
+# and the same two strings in the text, spacy's phraseMatcher reports 2 matching (but we could expect 3), 
+# but with "Beginning Postsecondary Student" and "Beginning Postsecondary" as matching terms, it reports 4 matching (but we could expect 2 like above).
+# the entity ruler seems to deal better with these cases.   
 # %%
-df = pd.read_csv('../input/smaller/val.csv')
-publications = Path('../input/smaller/val/').iterdir()
+df = pd.read_csv('../input/smaller/train.csv')
+publications = Path('../input/smaller/train/').iterdir()
 # %%
 for p in tqdm(publications):
     labels = df[df['Id'] == p.stem]['dataset_label'].values
     output = publication_iob(p, labels)
-    pd.DataFrame(output).to_json('../input/smaller/iob2/val/'+p.stem+'.jsonl', orient='records', lines=True)
+    p_df = pd.DataFrame(output)
+    p_df.to_json('../input/smaller/iob2/train/'+p.stem+'.jsonl', orient='records', lines=True)
 # %% COMPARISON WITH BERT PRETOKENIZER
 from tokenizers.pre_tokenizers import BertPreTokenizer  
 pretokenizer = BertPreTokenizer()
