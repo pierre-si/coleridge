@@ -24,7 +24,7 @@ def publication_iob(publication_path, dataset_labels):
         publication = json.load(f)
 
     for section in publication:
-        entry = {'section_title': section['section_title']}
+        entry = {'Id': publication_path.stem, 'section_title': section['section_title']}
         sentences = nltk.tokenize.sent_tokenize(section['text'])
         for sentence in sentences:
             doc = nlp(sentence)
@@ -42,7 +42,7 @@ publications = Path('../input/smaller/val/').iterdir()
 # %%
 for p in tqdm(publications):
     labels = df[df['Id'] == p.stem]['dataset_label'].values
-    output = publication_matches(p, labels)
+    output = publication_iob(p, labels)
     pd.DataFrame(output).to_json('../input/smaller/iob2/val/'+p.stem+'.jsonl', orient='records', lines=True)
 # %% COMPARISON WITH BERT PRETOKENIZER
 from tokenizers.pre_tokenizers import BertPreTokenizer  
