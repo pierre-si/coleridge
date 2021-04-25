@@ -22,5 +22,4 @@ NB:
 (-m : to get the metadata file)
 
 # Retrieve kernel's output
-1. kaggle kernels output pseudo/kernel-name -p output/ 
-
+1. kaggle kernels output pseudo/kernel-name -p output/

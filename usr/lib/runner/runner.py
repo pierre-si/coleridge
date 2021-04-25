@@ -53,17 +53,27 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"
+        }
     )
     config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained config name or path if not the same as model_name"
+        },
     )
     tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained tokenizer name or path if not the same as model_name"
+        },
     )
     cache_dir: Optional[str] = field(
         default=None,
-        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
+        metadata={
+            "help": "Where do you want to store the pretrained models downloaded from huggingface.co"
+        },
     )
 
 
@@ -73,26 +83,38 @@ class DataTrainingArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
 
-    task_name: Optional[str] = field(default="ner", metadata={"help": "The name of the task (ner, pos...)."})
+    task_name: Optional[str] = field(
+        default="ner", metadata={"help": "The name of the task (ner, pos...)."}
+    )
     dataset_name: Optional[str] = field(
-        default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
+        default=None,
+        metadata={"help": "The name of the dataset to use (via the datasets library)."},
     )
     dataset_config_name: Optional[str] = field(
-        default=None, metadata={"help": "The configuration name of the dataset to use (via the datasets library)."}
+        default=None,
+        metadata={
+            "help": "The configuration name of the dataset to use (via the datasets library)."
+        },
     )
     train_file: Optional[str] = field(
-        default=None, metadata={"help": "The input training data file (a csv or JSON file)."}
+        default=None,
+        metadata={"help": "The input training data file (a csv or JSON file)."},
     )
     validation_file: Optional[str] = field(
         default=None,
-        metadata={"help": "An optional input evaluation data file to evaluate on (a csv or JSON file)."},
+        metadata={
+            "help": "An optional input evaluation data file to evaluate on (a csv or JSON file)."
+        },
     )
     test_file: Optional[str] = field(
         default=None,
-        metadata={"help": "An optional input test data file to predict on (a csv or JSON file)."},
+        metadata={
+            "help": "An optional input test data file to predict on (a csv or JSON file)."
+        },
     )
     overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
+        default=False,
+        metadata={"help": "Overwrite the cached training and evaluation sets"},
     )
     preprocessing_num_workers: Optional[int] = field(
         default=None,
@@ -115,15 +137,27 @@ class DataTrainingArguments:
     )
 
     def __post_init__(self):
-        if self.dataset_name is None and self.train_file is None and self.validation_file is None:
-            raise ValueError("Need either a dataset name or a training/validation file.")
+        if (
+            self.dataset_name is None
+            and self.train_file is None
+            and self.validation_file is None
+        ):
+            raise ValueError(
+                "Need either a dataset name or a training/validation file."
+            )
         else:
             if self.train_file is not None:
                 extension = self.train_file.split(".")[-1]
-                assert extension in ["csv", "json"], "`train_file` should be a csv or a json file."
+                assert extension in [
+                    "csv",
+                    "json",
+                ], "`train_file` should be a csv or a json file."
             if self.validation_file is not None:
                 extension = self.validation_file.split(".")[-1]
-                assert extension in ["csv", "json"], "`validation_file` should be a csv or a json file."
+                assert extension in [
+                    "csv",
+                    "json",
+                ], "`validation_file` should be a csv or a json file."
         self.task_name = self.task_name.lower()
 
 
@@ -132,11 +166,15 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
+    parser = HfArgumentParser(
+        (ModelArguments, DataTrainingArguments, TrainingArguments)
+    )
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, training_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -155,7 +193,9 @@ def main():
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO if is_main_process(training_args.local_rank) else logging.WARN,
+        level=logging.INFO
+        if is_main_process(training_args.local_rank)
+        else logging.WARN,
     )
 
     # Log on each process the small summary:
@@ -206,7 +246,9 @@ def main():
         features = datasets["validation"].features
     text_column_name = "tokens" if "tokens" in column_names else column_names[0]
     label_column_name = (
-        f"{data_args.task_name}_tags" if f"{data_args.task_name}_tags" in column_names else column_names[1]
+        f"{data_args.task_name}_tags"
+        if f"{data_args.task_name}_tags" in column_names
+        else column_names[1]
     )
 
     # In the event the labels are not a `Sequence[ClassLabel]`, we will need to go through the dataset to get the
@@ -222,8 +264,10 @@ def main():
     # features[label_column_name] will be different for json and csv files:
     # json files: Sequence(feature=Value(dtype='string', id=None), length=-1, id=None)
     # csv files: Value(dtype='string', id=None)
-    if hasattr(features[label_column_name], 'feature') and isinstance(features[label_column_name].feature, ClassLabel):
-    #if isinstance(features[label_column_name].feature, ClassLabel):
+    if hasattr(features[label_column_name], "feature") and isinstance(
+        features[label_column_name].feature, ClassLabel
+    ):
+        # if isinstance(features[label_column_name].feature, ClassLabel):
         label_list = features[label_column_name].feature.names
         # No need to convert the labels since they are already ints.
         label_to_id = {i: i for i in range(len(label_list))}
@@ -238,13 +282,17 @@ def main():
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        model_args.config_name
+        if model_args.config_name
+        else model_args.model_name_or_path,
         num_labels=num_labels,
         finetuning_task=data_args.task_name,
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        model_args.tokenizer_name
+        if model_args.tokenizer_name
+        else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         use_fast=True,
     )
@@ -292,7 +340,11 @@ def main():
                 # For the other tokens in a word, we set the label to either the current label or -100, depending on
                 # the label_all_tokens flag.
                 else:
-                    label_ids.append(label_to_id[label[word_idx]] if data_args.label_all_tokens else -100)
+                    label_ids.append(
+                        label_to_id[label[word_idx]]
+                        if data_args.label_all_tokens
+                        else -100
+                    )
                 previous_word_idx = word_idx
 
             labels.append(label_ids)
@@ -336,7 +388,9 @@ def main():
         model=model,
         args=training_args,
         train_dataset=tokenized_datasets["train"] if training_args.do_train else None,
-        eval_dataset=tokenized_datasets["validation"] if training_args.do_eval else None,
+        eval_dataset=tokenized_datasets["validation"]
+        if training_args.do_eval
+        else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
@@ -345,7 +399,9 @@ def main():
     # Training
     if training_args.do_train:
         trainer.train(
-            model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
+            model_path=model_args.model_name_or_path
+            if os.path.isdir(model_args.model_name_or_path)
+            else None
         )
         trainer.save_model()  # Saves the tokenizer too for easy upload
 
@@ -356,7 +412,9 @@ def main():
 
         results = trainer.evaluate()
 
-        output_eval_file = os.path.join(training_args.output_dir, "eval_results_ner.txt")
+        output_eval_file = os.path.join(
+            training_args.output_dir, "eval_results_ner.txt"
+        )
         if trainer.is_world_process_zero():
             with open(output_eval_file, "w") as writer:
                 logger.info("***** Eval results *****")
@@ -378,7 +436,9 @@ def main():
             for prediction, label in zip(predictions, labels)
         ]
 
-        output_test_results_file = os.path.join(training_args.output_dir, "test_results.txt")
+        output_test_results_file = os.path.join(
+            training_args.output_dir, "test_results.txt"
+        )
         if trainer.is_world_process_zero():
             with open(output_test_results_file, "w") as writer:
                 for key, value in metrics.items():
@@ -386,7 +446,9 @@ def main():
                     writer.write(f"{key} = {value}\n")
 
         # Save predictions
-        output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
+        output_test_predictions_file = os.path.join(
+            training_args.output_dir, "test_predictions.txt"
+        )
         if trainer.is_world_process_zero():
             with open(output_test_predictions_file, "w") as writer:
                 for prediction in true_predictions:
@@ -402,4 +464,3 @@ def _mp_fn(index):
 
 if __name__ == "__main__":
     main()
-
