@@ -57,6 +57,7 @@ for p in tqdm(publications):
 from tokenizers.pre_tokenizers import BertPreTokenizer
 
 pretokenizer = BertPreTokenizer()
+# pretokenizer.pre_tokenize_str('All told, the annual, in-state cost of attendance at a public four-year institution will run about $38,000 in the early 2030s in today\'s dollars')
 tokenized = pretokenizer.pre_tokenize_str(content[0]["text"])
 print("Spacy:", len(doc), "Hugginface:", len(tokenized))
 # Huggingface splits numbers with a comma whereas Spacy does not.
