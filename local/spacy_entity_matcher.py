@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import nltk
 import spacy
+from spacy.training.iob_utils import doc_to_biluo_tags
 from tqdm import tqdm
 
 #%%
@@ -43,8 +44,37 @@ def publication_iob(publication_path, dataset_labels):
 # but with "Beginning Postsecondary Student" and "Beginning Postsecondary" as matching terms, it reports 4 matching (but we could expect 2 like above).
 # the entity ruler seems to deal better with these cases.
 # %%
-df = pd.read_csv("../input/smaller/train.csv")
-publications = Path("../input/smaller/train/").iterdir()
+
+
+def publication_biluo(publication_path, dataset_labels):
+    """Tokenize and find occurrences of dataset_labels in the publication texts.
+    output: jsonl of the publication with keys 'Id', 'section_title', 'sentence', 'tokens', 'ner_tags' (IOB2)
+    """
+    nlp = spacy.load("en_core_web_sm")
+    nlp.select_pipes(enable="")
+    ruler = nlp.add_pipe("entity_ruler")
+    patterns = [{"label": "DATASET", "pattern": label} for label in dataset_labels]
+    ruler.add_patterns(patterns)
+
+    output = []
+    with open(publication_path, "r") as f:
+        publication = json.load(f)
+
+    for section in publication:
+        entry = {"Id": publication_path.stem, "section_title": section["section_title"]}
+        sentences = nltk.tokenize.sent_tokenize(section["text"])
+        for sentence in sentences:
+            doc = nlp(sentence)
+            entry["sentence"] = doc.text
+            entry["tokens"] = [token.text for token in doc]
+            entry["ner_tags"] = doc_to_biluo_tags(doc)
+            output.append(entry.copy())
+    return output
+
+
+# %%
+df = pd.read_csv("../input/subset/data/val.csv")
+publications = Path("../input/subset/data/val/").iterdir()
 # %%
 for p in tqdm(publications):
     labels = df[df["Id"] == p.stem]["dataset_label"].values
@@ -53,6 +83,17 @@ for p in tqdm(publications):
     p_df.to_json(
         "../input/smaller/iob2/train/" + p.stem + ".jsonl", orient="records", lines=True
     )
+# %%
+for p in tqdm(publications):
+    labels = np.unique(
+        df[df["Id"] == p.stem][["dataset_title", "dataset_label"]].values.ravel()
+    )
+    output = publication_biluo(p, labels)
+    p_df = pd.DataFrame(output)
+    p_df.to_json(
+        "../input/subset/biluo/val/" + p.stem + ".jsonl", orient="records", lines=True
+    )
+
 # %% COMPARISON WITH BERT PRETOKENIZER
 from tokenizers.pre_tokenizers import BertPreTokenizer
 
