@@ -1,4 +1,13 @@
 #%%
+import sys, os
+
+loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
+config = {}
+if loc == "Batch":
+    config["save_total_limit"] = 12
+else:
+    config["save_total_limit"] = None
+#%%
 import logging
 
 import numpy as np
@@ -47,13 +56,13 @@ training_args = TrainingArguments(
     lr_scheduler_type=SchedulerType.LINEAR,
     warmup_ratio=0.0,
     warmup_steps=0,
-    logging_dir="runs/Apr30_16-42-31_debian",
+    # logging_dir="runs/",
     logging_strategy=IntervalStrategy.STEPS,
-    logging_first_step=False,
+    logging_first_step=True,
     logging_steps=500,
     save_strategy=IntervalStrategy.STEPS,
     save_steps=500,
-    save_total_limit=None,
+    save_total_limit=config["save_total_limit"],
     no_cuda=False,
     seed=42,
     fp16=False,
@@ -78,7 +87,7 @@ training_args = TrainingArguments(
     ignore_data_skip=False,
     sharded_ddp=[],
     deepspeed=None,
-    label_smoothing_factor=0.0,
+    label_smoothing_factor=0.1,
     adafactor=False,
     group_by_length=False,
     length_column_name="length",
@@ -86,11 +95,25 @@ training_args = TrainingArguments(
     ddp_find_unused_parameters=None,
     dataloader_pin_memory=True,
     skip_memory_metrics=False,
-)  # , _n_gpu=1)#, mp_parameters=)
+)
+
+#%%
+if (
+    os.path.exists(training_args.output_dir)
+    and os.listdir(training_args.output_dir)
+    and training_args.do_train
+    and not training_args.overwrite_output_dir
+):
+    raise ValueError(
+        f"Output directory ({training_args.output_dir}) already exists and is not empty."
+        "Use --overwrite_output_dir to overcome."
+    )
 
 #%% Get the datasets
-train_file = "../input/subset/biluo/ner_train.json"  # 5,1% de ner_train (lui-même 2,1% des publications)
-validation_file = "../input/subset/biluo/ner_val.json"  # 14,5% de ner_val (lui même 0,7% des publications)
+# ner_train_short: 5,1% de ner_train (lui-même 2,1% des publications)
+# ner_val_short: 14,5% de ner_val (lui même 0,7% des publications)
+train_file = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
+validation_file = "../input/subset_pub-split/biluo/ner_val_short.json"
 
 data_files = {}
 if train_file is not None:
