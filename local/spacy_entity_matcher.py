@@ -68,13 +68,14 @@ def publication_biluo(publication_path, dataset_labels):
             entry["sentence"] = doc.text
             entry["tokens"] = [token.text for token in doc]
             entry["ner_tags"] = doc_to_biluo_tags(doc)
+            entry["ent_count"] = len(doc.ents)
             output.append(entry.copy())
     return output
 
 
 # %%
-df = pd.read_csv("../input/subset/data/val.csv")
-publications = Path("../input/subset/data/val/").iterdir()
+df = pd.read_csv("../input/subset_pub-split/data/val.csv")
+publications = Path("../input/subset_pub-split/data/val/").iterdir()
 # %%
 for p in tqdm(publications):
     labels = df[df["Id"] == p.stem]["dataset_label"].values
@@ -90,8 +91,11 @@ for p in tqdm(publications):
     )
     output = publication_biluo(p, labels)
     p_df = pd.DataFrame(output)
+
     p_df.to_json(
-        "../input/subset/biluo/val/" + p.stem + ".jsonl", orient="records", lines=True
+        "../input/subset_pub-split/biluo/val/" + p.stem + ".jsonl",
+        orient="records",
+        lines=True,
     )
 
 # %% COMPARISON WITH BERT PRETOKENIZER
