@@ -1,0 +1,13 @@
+{
+  "id": "punderscore/spacy-biluo",
+  "title": "spacy-biluo",
+  "code_file": "spacy_entity_matcher.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": ["coleridgeinitiative-show-us-the-data"],
+  "kernel_sources": []
+}
