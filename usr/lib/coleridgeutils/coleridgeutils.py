@@ -108,3 +108,59 @@ def jaccard(str1, str2):
     b = set(str2.lower().split())
     c = a.intersection(b)
     return float(len(c)) / (len(a) + len(b) - len(c))
+
+
+#%%
+def publications_matches(preds, truths):
+    """Computes the number of TP, FP and FN for a publication
+    args:
+        preds: list of predicted dataset_labels
+        truth: list of ground truth dataset_labels
+    """
+    # predictions have a default jaccard score of 0 (unmatched predictions will keep this value of 0)
+    preds_jaccard = [0] * len(preds)
+    fn = 0
+    # looking for the prediction that matches the ground_truth
+    for ground_truth in truths:
+        match = 0
+        match_jaccard = 0
+        for i, pred in enumerate(preds):
+            jaccard_score = jaccard(ground_truth, pred)
+            if jaccard_score > match_jaccard:
+                match_jaccard = jaccard_score
+                match = i
+        # Any ground truths with no nearest predictions are counted as false negatives ('no nearest predictions' is interpreted as: the jaccard score between this ground_truth and the matched prediction is lower than 0.5)
+        if match_jaccard < 0.5:
+            fn += 1
+        # We store the jaccard score for the matched prediction
+        # This will be used to count TP and FP
+        # A prediction can match multiple ground_truth. We keep the highest jaccard score (predictions matching with a 0.4 and a 0.6 score will thus be counted as TP).
+        if match_jaccard > preds_jaccard[i]:
+            preds_jaccard[i] = match_jaccard
+
+    # Any matched predictions where the (highest) Jaccard score meets or exceeds the threshold of 0.5 are counted as true positives
+    tp = (np.array(preds_jaccard) >= 0.5).sum()
+    # The remainder and any unmatched predictions are counted as false positive
+    fp = len(preds) - tp
+    return tp, fp, fn
+
+
+def coleridge_fscore(preds, truths):
+    """Computes Coleridge's Jaccard-based F0.5 score
+    args:
+        preds: list of list of predicted dataset_labels
+        truths: list of list of ground truth dataset_labels
+    """
+    tp = 0
+    fp = 0
+    fn = 0
+    for pub_preds, pub_truths in zip(preds, truths):
+        ptp, pfp, pfn = publications_matches(pub_preds, pub_truths)
+        tp += ptp
+        fp += pfp
+        fn += pfn
+
+    return (1 + 0.5 ** 2) * tp / ((1 + 0.5 ** 2) * tp + 0.5 ** 2 * fn + fp)
+
+
+# %%
