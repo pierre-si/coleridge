@@ -4,8 +4,6 @@ input/
 output/
 runs/
 
-kernel-metadata.json
-
 *~
 
 __pycache__
