@@ -3,6 +3,7 @@ from pathlib import Path
 from shutil import copy2
 
 import pandas as pd
+import numpy as np
 
 
 def pub_folder_to_csv(folder_path):
@@ -22,11 +23,14 @@ def downsample(file_path):
     args:
         file_path: path to the json file with all sentences from all publications
     """
+    file_path = Path(file_path)
     df = pd.read_json(file_path, orient="records", lines=True)
-    entities = df[df.ent_count > 0]
-    n_sample = 990  # entities.ent_count.sum()
-    no_entities_subset = df[df.ent_count == 0].sample(n_sample)
-    entities.append(no_ent_subset).sort_index().set_index("Id").to_json(
+    n_keep = df.ent_count.sum()
+    n_without_ents = len(df[df.ent_count == 0])
+    drop_indices = np.random.choice(
+        df[df.ent_count == 0].index, n_without_ents - n_keep, replace=False
+    )
+    df.drop(drop_indices).to_json(
         file_path.parent / (file_path.stem + "_downsampled.json"),
         orient="records",
         lines=True,
@@ -93,7 +97,7 @@ def dataset_split(file_path, publications_path, val_size=0.1):
 if __name__ == "__main__":
     # pub_folder_to_csv(Path("../input/subset/data/train"))
     # pub_folder_to_csv(Path("../input/subset/data/val"))
-    pub_folder_to_csv(Path("../input/subset_dataset-split/publications"))
+    # pub_folder_to_csv(Path("../input/subset_dataset-split/publications"))
     dataset_split(
         Path("../input/subset_dataset-split/publications.csv"),
         Path("../input/subset_dataset-split/publications"),
