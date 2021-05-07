@@ -1,0 +1,13 @@
+{
+  "id": "punderscore/bert-finetuning",
+  "title": "bert-finetuning",
+  "code_file": "bert-finetuning.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": ["punderscore/coleridge-sentences"],
+  "competition_sources": [],
+  "kernel_sources": ["punderscore/runner"]
+}
