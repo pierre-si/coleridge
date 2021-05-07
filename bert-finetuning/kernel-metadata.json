@@ -1,13 +1,13 @@
 {
   "id": "punderscore/bert-finetuning",
   "title": "bert-finetuning",
-  "code_file": "bert-finetuning.ipynb",
+  "code_file": "bert_finetuning.py",
   "language": "python",
-  "kernel_type": "notebook",
+  "kernel_type": "script",
   "is_private": "true",
   "enable_gpu": "true",
   "enable_internet": "true",
-  "dataset_sources": ["punderscore/coleridge-sentences"],
+  "dataset_sources": ["punderscore/coleridgebiluodownsampled"],
   "competition_sources": [],
-  "kernel_sources": ["punderscore/runner"]
+  "kernel_sources": []
 }

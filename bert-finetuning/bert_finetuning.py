@@ -1,12 +1,32 @@
 #%%
-import sys, os
+import subprocess, sys, os
+
+
+def upgrade(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", package])
+
 
 loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
 config = {}
 if loc == "Batch":
     config["save_total_limit"] = 12
+    config[
+        "train_file"
+    ] = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
+    config["val_file"] = "../input/coleridgebiluodownsampled/ner_val.json"
+    config["batch_size"] = 32
+    upgrade("fsspec")
+    upgrade("datasets")
+    upgrade("seqeval")
+
 else:
     config["save_total_limit"] = None
+    # ner_train_short: 5,1% de ner_train (lui-même 2,1% des publications)
+    # ner_val_short: 14,5% de ner_val (lui même 0,7% des publications)
+    config["train_file"] = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
+    config["val_file"] = "../input/subset_pub-split/biluo/ner_val_short.json"
+    config["batch_size"] = 1
+
 #%%
 import logging
 
@@ -41,8 +61,8 @@ training_args = TrainingArguments(
     do_predict=False,
     evaluation_strategy=IntervalStrategy.STEPS,
     prediction_loss_only=False,
-    per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,
+    per_device_train_batch_size=config["batch_size"],
+    per_device_eval_batch_size=config["batch_size"],
     gradient_accumulation_steps=1,
     eval_accumulation_steps=None,
     learning_rate=5e-05,
@@ -110,19 +130,19 @@ if (
     )
 
 #%% Get the datasets
-# ner_train_short: 5,1% de ner_train (lui-même 2,1% des publications)
-# ner_val_short: 14,5% de ner_val (lui même 0,7% des publications)
-train_file = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
-validation_file = "../input/subset_pub-split/biluo/ner_val_short.json"
 
 data_files = {}
-if train_file is not None:
-    data_files["train"] = train_file
-if validation_file is not None:
-    data_files["validation"] = validation_file
+if config["train_file"] is not None:
+    data_files["train"] = config["train_file"]
+if config["val_file"] is not None:
+    data_files["validation"] = config["val_file"]
 
-extension = train_file.split(".")[-1]
+extension = config["train_file"].split(".")[-1]
 datasets = load_dataset(extension, data_files=data_files)
+
+if config["val_file"] is None:
+    datasets = datasets["train"].train_test_split(test_size=0.1)
+    datasets["validation"] = datasets.pop("test")
 
 column_names = datasets["train"].column_names
 features = datasets["train"].features
@@ -277,81 +297,3 @@ trainer.save_model()  # Saves the tokenizer too for easy upload
 #         for key, value in results.items():
 #             logger.info(f"  {key} = {value}")
 #             writer.write(f"{key} = {value}\n")
-
-# %% Predict
-logger.info("*** Predict ***")
-
-test_dataset = tokenized_datasets["test"]
-predictions, labels, metrics = trainer.predict(test_dataset)
-#%%
-probas = softmax(predictions, axis=2)
-predictions = np.argmax(predictions, axis=2)
-
-# Remove ignored index (special tokens)
-true_predictions = [
-    [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
-    for prediction, label in zip(predictions, labels)
-]
-
-true_probas = [
-    [prob[p] for (p, prob, l) in zip(prediction, proba, label) if l != -100]
-    for prediction, proba, label in zip(predictions, probas, labels)
-]
-
-# %% add predicted tags and associated probabilities to the dataset
-# updated_dataset = datasets['test'].map(lambda example: {'bert_tags': })
-updated_dataset = datasets["test"].add_column("bert_tags", true_predictions)
-updated_dataset = updated_dataset.add_column("bert_probas", true_probas)
-#%%
-import spacy
-from spacy.training import biluo_tags_to_spans
-
-nlp = spacy.load("en_core_web_sm")
-nlp.select_pipes(enable="")
-#%% save predicted dataset labels to csv
-publications_labels = {}
-for example in updated_dataset:
-    doc = nlp(example["sentence"])
-    try:
-        # use iob_to_biluo before calling biluo_tags_to_spans
-        ents_span = biluo_tags_to_spans(doc, example["bert_tags"])
-        doc.set_ents(ents_span)
-    except:
-        pass
-
-    entities = set([ent.text for ent in doc.ents])
-    if example["Id"] in publications_labels:
-        publications_labels[example["Id"]].update(entities)
-    else:
-        publications_labels[example["Id"]] = entities.copy()
-
-predictions_df = []
-for key, val in publications_labels.items():
-    predictions_df.append({"Id": key, "PredictionString": "|".join(val)})
-
-pd.DataFrame(predictions_df).set_index("Id").to_csv("bert-predictions.csv")
-#%% save predicted tags to JSONL
-updated_dataset.to_json("bert-predictions.json", orient="records", lines=True)
-#%%
-output_test_results_file = os.path.join(training_args.output_dir, "test_results.txt")
-if trainer.is_world_process_zero():
-    with open(output_test_results_file, "w") as writer:
-        for key, value in metrics.items():
-            logger.info(f"  {key} = {value}")
-            writer.write(f"{key} = {value}\n")
-
-#%%
-# Save predictions
-output_test_predictions_file = os.path.join(
-    training_args.output_dir, "test_predictions.txt"
-)
-if trainer.is_world_process_zero():
-    with open(output_test_predictions_file, "w") as writer:
-        for prediction in true_predictions:
-            writer.write(" ".join(prediction) + "\n")
-# %%
-# DataTrainingArguments(task_name='ner', dataset_name=None, dataset_config_name=None, train_file='../input/coleridge-sentences/ner_train-256.json', validation_file='../input/coleridge-sentences/ner_val-256.json', test_file='sentences.json', overwrite_cache=False, preprocessing_num_workers=None, pad_to_max_length=False, label_all_tokens=False)
-
-# num_labels: 2
-
-# ModelArguments(model_name_or_path='../input/bert-finetuned', config_name=None, tokenizer_name=None, cache_dir=None)
