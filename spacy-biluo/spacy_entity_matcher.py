@@ -74,6 +74,7 @@ def publication_biluo(publication_path, dataset_labels):
     output: jsonl of the publication with keys 'Id', 'section_title', 'sentence', 'tokens', 'ner_tags' (IOB2)
     """
     nlp = spacy.load("en_core_web_sm")
+    nlp.max_length = 2_000_000
     nlp.select_pipes(enable="")
     ruler = nlp.add_pipe("entity_ruler")
     patterns = [{"label": "DATASET", "pattern": label} for label in dataset_labels]
