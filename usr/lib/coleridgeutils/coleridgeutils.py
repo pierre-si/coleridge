@@ -6,6 +6,8 @@ import re
 import pandas as pd
 import numpy as np
 import nltk
+import spacy
+from spacy.training.iob_utils import doc_to_biluo_tags
 
 #%%
 def clean_text(txt):
@@ -36,6 +38,32 @@ def publications_cleaned_sentences_json(path):
     df["ner_tags"] = df["tokens"].apply(
         lambda x: ["O"] * len(x)
     )  # add dummy column of ner_tags to match train.json format
+    df.to_json("sentences.json", orient="records", lines=True)
+
+
+def publications_sentences_spacy(path):
+    nlp = spacy.load("en_core_web_sm")
+    nlp.max_length = 2_000_000
+    nlp.select_pipes(enable="")
+
+    path = Path(path)
+    publications = path.iterdir()
+    rows = []
+    for ppath in publications:
+        row = {"Id": Path(ppath).stem}
+
+        with open(ppath) as f:
+            p = json.load(f)
+        for section in p:
+            row["section_title"] = section["section_title"]
+            sentences = nltk.tokenize.sent_tokenize(section["text"])
+            for sentence in sentences:
+                row["sentence"] = sentence
+                doc = nlp(sentence)
+                row["tokens"] = [token.text for token in doc]
+                row["ner_tags"] = doc_to_biluo_tags(doc)
+                rows.append(row.copy())
+    df = pd.DataFrame(rows)
     df.to_json("sentences.json", orient="records", lines=True)
 
 
@@ -116,8 +144,12 @@ def publications_matches(preds, truths):
     args:
         preds: list of predicted dataset_labels
         truth: list of ground truth dataset_labels
+    return:
+        true positives, false positives, false negatives
     """
     # predictions have a default jaccard score of 0 (unmatched predictions will keep this value of 0)
+    if len(preds) == 0:
+        return 0, 0, len(truths)
     preds_jaccard = [0] * len(preds)
     fn = 0
     # looking for the prediction that matches the ground_truth
@@ -135,8 +167,8 @@ def publications_matches(preds, truths):
         # We store the jaccard score for the matched prediction
         # This will be used to count TP and FP
         # A prediction can match multiple ground_truth. We keep the highest jaccard score (predictions matching with a 0.4 and a 0.6 score will thus be counted as TP).
-        if match_jaccard > preds_jaccard[i]:
-            preds_jaccard[i] = match_jaccard
+        if match_jaccard > preds_jaccard[match]:
+            preds_jaccard[match] = match_jaccard
 
     # Any matched predictions where the (highest) Jaccard score meets or exceeds the threshold of 0.5 are counted as true positives
     tp = (np.array(preds_jaccard) >= 0.5).sum()
