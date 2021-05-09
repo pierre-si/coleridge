@@ -37,6 +37,20 @@ def downsample(file_path):
     )
 
 
+def remove_no_ents(file_path):
+    """Remove entries without entities.
+    args:
+        file_path: path to the json file with all chunks from all publications
+    """
+    file_path = Path(file_path)
+    df = pd.read_json(file_path, orient="records", lines=True)
+    df[df.ent_count > 0].to_json(
+        file_path.parent / (file_path.stem + "_downsampled.json"),
+        orient="records",
+        lines=True,
+    )
+
+
 # fonction pour diviser le subset en un ensemble d'apprentissage et un ensemble de validation de sorte à avoir
 # /!\ on split selon la colonne dataset_label et pas dataset_title ce qui veut dire que des dataset_titles vont se retrouver à la fois en train et en valid (avec des labels différents, ce qui peut être intéressant)
 # on split au niveau des publications pas des phrases, certaines publications ont à la fois des datasets de train et de val, on les met dans val.
@@ -98,7 +112,9 @@ if __name__ == "__main__":
     # pub_folder_to_csv(Path("../input/subset/data/train"))
     # pub_folder_to_csv(Path("../input/subset/data/val"))
     # pub_folder_to_csv(Path("../input/subset_dataset-split/publications"))
-    dataset_split(
-        Path("../input/subset_dataset-split/publications.csv"),
-        Path("../input/subset_dataset-split/publications"),
-    )
+    # dataset_split(
+    # Path("../input/subset_dataset-split/publications.csv"),
+    # Path("../input/subset_dataset-split/publications"),
+    # )
+
+    remove_no_ents("../input/subset_pub-split/biluo/ner_train.json")
