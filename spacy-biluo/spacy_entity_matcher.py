@@ -17,8 +17,12 @@ if loc == "Batch":
     subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
 
 else:
-    config["path_to_csv"] = "../input/subset_pub-split/data/val.csv"
-    config["path_to_publications"] = "../input/subset_pub-split/data/val/"
+    config["path_to_csv"] = "../input/subset_pub-split/data/train.csv"
+    config["path_to_publications"] = "../input/subset_pub-split/data/train/"
+    # config["path_to_csv"] = "../input/coleridgeinitiative-show-us-the-data/train.csv"
+    # config[
+    #     "path_to_publications"
+    # ] = "../input/coleridgeinitiative-show-us-the-data/train"
 
 
 #%%
@@ -71,11 +75,13 @@ def publication_iob(publication_path, dataset_labels):
 
 def publication_biluo(publication_path, dataset_labels):
     """Tokenize and find occurrences of dataset_labels in the publication texts.
-    output: jsonl of the publication with keys 'Id', 'section_title', 'sentence', 'tokens', 'ner_tags' (IOB2)
+    output: jsonl of the publication with keys 'Id', 'section_title', 'text', 'tokens', 'ner_tags' (BILUO)
     """
     nlp = spacy.load("en_core_web_sm")
     nlp.max_length = 2_000_000
+    # we use the sentencizer to get sentence boundaries
     nlp.select_pipes(enable="")
+    nlp.add_pipe("sentencizer")
     ruler = nlp.add_pipe("entity_ruler")
     patterns = [{"label": "DATASET", "pattern": label} for label in dataset_labels]
     ruler.add_patterns(patterns)
@@ -86,14 +92,21 @@ def publication_biluo(publication_path, dataset_labels):
 
     for section in publication:
         entry = {"Id": publication_path.stem, "section_title": section["section_title"]}
-        sentences = nltk.tokenize.sent_tokenize(section["text"])
-        for sentence in sentences:
-            doc = nlp(sentence)
-            entry["sentence"] = doc.text
-            entry["tokens"] = [token.text for token in doc]
-            entry["ner_tags"] = doc_to_biluo_tags(doc)
-            entry["ent_count"] = len(doc.ents)
+        doc = nlp(section["text"])
+        part_start = 0
+        while part_start < len(doc):
+            part_end = doc[part_start + 128 : part_start + 129].sent.end
+            if part_end - part_start > 255:
+                part_end = part_start + 128
+            # span will be between 128 and 255 tokens long (except for the last one which can be shorter)
+            span = doc[part_start:part_end]
+            entry["text"] = span.text
+            entry["tokens"] = [token.text for token in span]
+            entry["ner_tags"] = doc_to_biluo_tags(span.as_doc())
+            entry["ent_count"] = len(span.ents)
+            entry["ents"] = [ent.text for ent in span.ents]
             output.append(entry.copy())
+            part_start = part_end
     return output
 
 
@@ -131,3 +144,5 @@ process_folder(config["path_to_publications"], df)
 # tokenized = pretokenizer.pre_tokenize_str(content[0]["text"])
 # print("Spacy:", len(doc), "Hugginface:", len(tokenized))
 # # Huggingface splits numbers with a comma whereas Spacy does not.
+
+# %%
