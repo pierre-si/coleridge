@@ -14,7 +14,7 @@ if loc == "Batch":
         "train_file"
     ] = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
     config["val_file"] = "../input/coleridgebiluodownsampled/ner_val.json"
-    config["batch_size"] = 32
+    config["batch_size"] = 8
     upgrade("fsspec")
     upgrade("datasets")
     upgrade("seqeval")
@@ -24,8 +24,8 @@ else:
     # ner_train_short: 5,1% de ner_train (lui-même 2,1% des publications)
     # ner_val_short: 14,5% de ner_val (lui même 0,7% des publications)
     config["train_file"] = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
-    config["val_file"] = "../input/subset_pub-split/biluo/ner_val_short.json"
-    config["batch_size"] = 1
+    config["val_file"] = "../input/subset_pub-split/biluo/ner_val.json"
+    config["batch_size"] = 4
 
 #%%
 import logging
@@ -52,7 +52,7 @@ from transformers.training_args import IntervalStrategy, SchedulerType
 
 logger = logging.getLogger(__name__)
 # %% Load training args
-model_path = "bert-base-uncased"
+model_path = "distilbert-base-cased"
 training_args = TrainingArguments(
     output_dir="output/",
     overwrite_output_dir=False,
@@ -79,9 +79,9 @@ training_args = TrainingArguments(
     # logging_dir="runs/",
     logging_strategy=IntervalStrategy.STEPS,
     logging_first_step=True,
-    logging_steps=500,
+    logging_steps=50,
     save_strategy=IntervalStrategy.STEPS,
-    save_steps=500,
+    save_steps=50,
     save_total_limit=config["save_total_limit"],
     no_cuda=False,
     seed=42,
@@ -94,7 +94,7 @@ training_args = TrainingArguments(
     tpu_metrics_debug=False,
     debug=False,
     dataloader_drop_last=False,
-    eval_steps=500,
+    eval_steps=50,
     dataloader_num_workers=0,
     past_index=-1,
     run_name="output/",
