@@ -17,12 +17,12 @@ if loc == "Batch":
     subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
 
 else:
-    config["path_to_csv"] = "../input/subset_pub-split/data/train.csv"
-    config["path_to_publications"] = "../input/subset_pub-split/data/train/"
-    # config["path_to_csv"] = "../input/coleridgeinitiative-show-us-the-data/train.csv"
-    # config[
-    #     "path_to_publications"
-    # ] = "../input/coleridgeinitiative-show-us-the-data/train"
+    # config["path_to_csv"] = "../input/subset_pub-split/data/train.csv"
+    # config["path_to_publications"] = "../input/subset_pub-split/data/train/"
+    config["path_to_csv"] = "../input/coleridgeinitiative-show-us-the-data/train.csv"
+    config[
+        "path_to_publications"
+    ] = "../input/coleridgeinitiative-show-us-the-data/train"
 
 
 #%%
@@ -78,7 +78,7 @@ def publication_biluo(publication_path, dataset_labels):
     output: jsonl of the publication with keys 'Id', 'section_title', 'text', 'tokens', 'ner_tags' (BILUO)
     """
     nlp = spacy.load("en_core_web_sm")
-    nlp.max_length = 2_000_000
+    nlp.max_length = 6_000_000
     # we use the sentencizer to get sentence boundaries
     nlp.select_pipes(enable="")
     nlp.add_pipe("sentencizer")
@@ -98,6 +98,9 @@ def publication_biluo(publication_path, dataset_labels):
             part_end = doc[part_start + 128 : part_start + 129].sent.end
             if part_end - part_start > 255:
                 part_end = part_start + 128
+                # while last token is part of an entity (we don't want to cut entities)
+                while doc[part_end].ent_iob != 2:
+                    part_end += 1
             # span will be between 128 and 255 tokens long (except for the last one which can be shorter)
             span = doc[part_start:part_end]
             entry["text"] = span.text
