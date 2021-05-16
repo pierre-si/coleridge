@@ -26,6 +26,7 @@ else:
 
 
 #%%
+import logging
 import json
 from pathlib import Path
 
@@ -36,6 +37,11 @@ import spacy
 from spacy.training.iob_utils import doc_to_biluo_tags
 from tqdm import tqdm
 
+logging.basicConfig(
+    filename="spacy-biluo.log",
+    encoding="utf-8",
+    format="%(asctime)s %(levelname)s:%(message)s",
+)
 #%%
 iob_map = {0: "", 1: "I-D", 2: "O", 3: "B-D"}
 
@@ -78,7 +84,7 @@ def publication_biluo(publication_path, dataset_labels):
     output: jsonl of the publication with keys 'Id', 'section_title', 'text', 'tokens', 'ner_tags' (BILUO)
     """
     nlp = spacy.load("en_core_web_sm")
-    nlp.max_length = 6_000_000
+    nlp.max_length = 10_000_000
     # we use the sentencizer to get sentence boundaries
     nlp.select_pipes(enable="")
     nlp.add_pipe("sentencizer")
@@ -92,6 +98,15 @@ def publication_biluo(publication_path, dataset_labels):
 
     for section in publication:
         entry = {"Id": publication_path.stem, "section_title": section["section_title"]}
+        if len(section["text"]) > nlp.max_length:
+            logging.error(
+                "Text of length %d exceeds maximum of %d for section: %s of publication: %s",
+                len(section["text"]),
+                nlp.max_length,
+                entry["section_title"],
+                entry["Id"],
+            )
+            continue
         doc = nlp(section["text"])
         part_start = 0
         while part_start < len(doc):
