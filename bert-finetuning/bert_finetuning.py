@@ -14,7 +14,9 @@ if loc == "Batch":
         "train_file"
     ] = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
     config["val_file"] = "../input/coleridgebiluodownsampled/ner_val.json"
-    config["batch_size"] = 8
+    config["batch_size"] = 16
+    config["num_train_epochs"] = 3
+    config["save_steps"] = 100
     upgrade("fsspec")
     upgrade("datasets")
     upgrade("seqeval")
@@ -23,9 +25,15 @@ else:
     config["save_total_limit"] = None
     # ner_train_short: 5,1% de ner_train (lui-même 2,1% des publications)
     # ner_val_short: 14,5% de ner_val (lui même 0,7% des publications)
-    config["train_file"] = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
-    config["val_file"] = "../input/subset_pub-split/biluo/ner_val.json"
+    config[
+        "train_file"
+    ] = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
+    config["val_file"] = "../input/coleridgebiluodownsampled/ner_val_short.json"
+    # config["train_file"] = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
+    # config["val_file"] = "../input/subset_pub-split/biluo/ner_val.json"
     config["batch_size"] = 4
+    config["num_train_epochs"] = 0.4
+    config["save_steps"] = 100
 
 #%%
 import logging
@@ -71,7 +79,7 @@ training_args = TrainingArguments(
     adam_beta2=0.999,
     adam_epsilon=1e-08,
     max_grad_norm=1.0,
-    num_train_epochs=3.0,
+    num_train_epochs=config["num_train_epochs"],
     max_steps=-1,
     lr_scheduler_type=SchedulerType.LINEAR,
     warmup_ratio=0.0,
@@ -79,9 +87,9 @@ training_args = TrainingArguments(
     # logging_dir="runs/",
     logging_strategy=IntervalStrategy.STEPS,
     logging_first_step=True,
-    logging_steps=50,
+    logging_steps=config["save_steps"],
     save_strategy=IntervalStrategy.STEPS,
-    save_steps=50,
+    save_steps=config["save_steps"],
     save_total_limit=config["save_total_limit"],
     no_cuda=False,
     seed=42,
@@ -94,7 +102,7 @@ training_args = TrainingArguments(
     tpu_metrics_debug=False,
     debug=False,
     dataloader_drop_last=False,
-    eval_steps=50,
+    eval_steps=config["save_steps"],
     dataloader_num_workers=0,
     past_index=-1,
     run_name="output/",
@@ -143,6 +151,8 @@ datasets = load_dataset(extension, data_files=data_files)
 if config["val_file"] is None:
     datasets = datasets["train"].train_test_split(test_size=0.1)
     datasets["validation"] = datasets.pop("test")
+
+datasets["train"] = datasets["train"].shuffle(seed=30)
 
 column_names = datasets["train"].column_names
 features = datasets["train"].features
