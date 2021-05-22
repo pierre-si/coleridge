@@ -218,7 +218,7 @@ nlp.select_pipes(enable="")
 #%% save predicted dataset labels to csv
 publications_labels = {}
 for example in updated_dataset:
-    doc = nlp(example["sentence"])
+    doc = nlp(example["text"])
     try:
         ents_span = biluo_tags_to_spans(doc, example["bert_tags"])
         doc.set_ents(ents_span)

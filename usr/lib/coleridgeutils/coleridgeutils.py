@@ -78,29 +78,41 @@ def publications_cleaned_sentences_json(path):
     df.to_json("sentences.json", orient="records", lines=True)
 
 
-def publications_sentences_spacy(path):
+def publications_sentences_spacy(publications_folder):
     nlp = spacy.load("en_core_web_sm")
-    nlp.max_length = 2_000_000
+    nlp.max_length = 10_000_000
     nlp.select_pipes(enable="")
+    nlp.add_pipe("sentencizer")
 
-    path = Path(path)
-    publications = path.iterdir()
-    rows = []
-    for ppath in publications:
-        row = {"Id": Path(ppath).stem}
+    publications_folder = Path(publications_folder)
+    output = []
+    for publication_path in publications_folder.iterdir():
+        with open(publication_path, "r") as f:
+            publication = json.load(f)
 
-        with open(ppath) as f:
-            p = json.load(f)
-        for section in p:
-            row["section_title"] = section["section_title"]
-            sentences = nltk.tokenize.sent_tokenize(section["text"])
-            for sentence in sentences:
-                row["sentence"] = sentence
-                doc = nlp(sentence)
-                row["tokens"] = [token.text for token in doc]
-                row["ner_tags"] = doc_to_biluo_tags(doc)
-                rows.append(row.copy())
-    df = pd.DataFrame(rows)
+        for section in publication:
+            entry = {
+                "Id": publication_path.stem,
+                "section_title": section["section_title"],
+            }
+            if len(section["text"]) > nlp.max_length:
+                continue
+            doc = nlp(section["text"])
+            part_start = 0
+            while part_start < len(doc):
+                part_end = doc[part_start + 128 : part_start + 129].sent.end
+                if part_end - part_start > 255:
+                    # this may split a dataset_label…
+                    part_end = part_start + 128
+                # span will be between 128 and 255 tokens long (except for the last one which can be shorter)
+                span = doc[part_start:part_end]
+                entry["text"] = span.text
+                entry["tokens"] = [token.text for token in span]
+                entry["ner_tags"] = doc_to_biluo_tags(span.as_doc())
+                entry["ent_count"] = len(span.ents)
+                output.append(entry.copy())
+                part_start = part_end
+    df = pd.DataFrame(output)
     df.to_json("sentences.json", orient="records", lines=True)
 
 
