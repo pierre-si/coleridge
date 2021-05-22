@@ -1,4 +1,41 @@
-import os
+import subprocess, sys, os
+
+
+def install(path, name):
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-I",  # ignore (overwrite) the already installed package
+            "--no-index",
+            "--find-links=" + path,
+            name,
+        ]
+    )
+
+
+def no_deps_install(path):
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--no-dependencies",
+            path,
+        ]
+    )
+
+
+loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
+if loc == "Batch" or loc == "Interactive":
+    install("../input/coleridge-packages/spacy", "spacy")
+    no_deps_install(
+        "../input/coleridge-packages/spacy/en_core_web_sm-3.0.0-py3-none-any.whl"
+    )
+
 from pathlib import Path
 import json
 import re

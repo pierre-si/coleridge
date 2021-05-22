@@ -1,0 +1,14 @@
+{
+  "id": "punderscore/coleridgeutils",
+  "title": "coleridgeutils",
+  "code_file": "coleridgeutils.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_internet": "false",
+  "dataset_sources": ["punderscore/coleridge-packages"],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "keywords": ["utility script"]
+}
