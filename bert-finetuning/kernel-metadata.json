@@ -9,5 +9,5 @@
   "enable_internet": "true",
   "dataset_sources": ["punderscore/coleridgebiluodownsampled"],
   "competition_sources": [],
-  "kernel_sources": []
+  "kernel_sources": ["punderscore/kaggleutils"]
 }

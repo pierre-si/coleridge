@@ -1,9 +1,6 @@
 #%%
 import subprocess, sys, os
-
-
-def upgrade(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", package])
+from kaggleutils import upgrade
 
 
 loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
@@ -114,7 +111,9 @@ def publication_biluo(publication_path, dataset_labels):
             if part_end - part_start > 255:
                 part_end = part_start + 128
                 # while last token is part of an entity (we don't want to cut entities)
-                while doc[part_end].ent_iob != 2:
+                while (
+                    doc[part_end].ent_iob != 2
+                ):  # 2: outside an entity (0: no tag set)
                     part_end += 1
             # span will be between 128 and 255 tokens long (except for the last one which can be shorter)
             span = doc[part_start:part_end]

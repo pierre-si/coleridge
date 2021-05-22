@@ -1,10 +1,6 @@
 #%%
-import subprocess, sys, os
-
-
-def upgrade(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", package])
-
+import os
+from kaggleutils import upgrade
 
 loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
 config = {}

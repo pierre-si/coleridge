@@ -9,5 +9,5 @@
   "enable_internet": "false",
   "dataset_sources": ["punderscore/coleridge-packages", "punderscore/bertfinetuned"],
   "competition_sources": ["coleridgeinitiative-show-us-the-data"],
-  "kernel_sources": ["punderscore/coleridgeutils"]
+  "kernel_sources": ["punderscore/kaggleutils", "punderscore/coleridgeutils"]
 }

@@ -9,5 +9,5 @@
   "enable_internet": "true",
   "dataset_sources": [],
   "competition_sources": ["coleridgeinitiative-show-us-the-data"],
-  "kernel_sources": []
+  "kernel_sources": ["punderscore/kaggleutils"]
 }

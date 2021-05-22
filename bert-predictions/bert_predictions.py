@@ -1,25 +1,10 @@
-import subprocess, sys, os
-
-
-def local_install(path, name):
-    subprocess.check_call(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "-I",
-            "--no-index",
-            "--find-links=" + path,
-            name,
-        ]
-    )
-
+import os
+from kaggleutils import offline_install
 
 loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
 if loc == "Batch" or loc == "Interactive":
-    local_install("../input/coleridge-packages/datasets", "datasets")
-    local_install("../input/coleridge-packages/seqeval", "seqeval")
+    offline_install("../input/coleridge-packages/datasets", "datasets")
+    offline_install("../input/coleridge-packages/seqeval", "seqeval")
 
 #%%
 # Add utility_scripts in the current path so that they can be imported directly just like in interactive mode
@@ -56,7 +41,7 @@ from coleridgeutils import (
 model_path = "../input/bertfinetuned/output/"
 training_args = torch.load(model_path + "training_args.bin")
 # %% Convert publications test folder to jsonl sentences file
-publications_sentences_spacy("../input/coleridgeinitiative-show-us-the-data/test")
+publications_sentences_spacy("../input/coleridgeinitiative-show-us-the-data/train")
 # Get the datasets
 data_files = {}
 data_files["test"] = "sentences.json"
