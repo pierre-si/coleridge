@@ -15,7 +15,7 @@ if loc == "Batch":
     ] = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
     config["val_file"] = "../input/coleridgebiluodownsampled/ner_val.json"
     config["batch_size"] = 16
-    config["num_train_epochs"] = 3
+    config["num_train_epochs"] = 2
     config["save_steps"] = 100
     upgrade("fsspec")
     upgrade("datasets")
@@ -23,8 +23,6 @@ if loc == "Batch":
 
 else:
     config["save_total_limit"] = None
-    # ner_train_short: 5,1% de ner_train (lui-même 2,1% des publications)
-    # ner_val_short: 14,5% de ner_val (lui même 0,7% des publications)
     config[
         "train_file"
     ] = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
@@ -50,11 +48,8 @@ from transformers import (
     AutoModelForTokenClassification,
     AutoTokenizer,
     DataCollatorForTokenClassification,
-    # HfArgumentParser,
-    # PreTrainedTokenizerFast,
     Trainer,
     TrainingArguments,
-    # set_seed,
 )
 from transformers.training_args import IntervalStrategy, SchedulerType
 
@@ -100,7 +95,7 @@ training_args = TrainingArguments(
     local_rank=-1,
     tpu_num_cores=None,
     tpu_metrics_debug=False,
-    debug=False,
+    debug="",
     dataloader_drop_last=False,
     eval_steps=config["save_steps"],
     dataloader_num_workers=0,
@@ -115,7 +110,7 @@ training_args = TrainingArguments(
     ignore_data_skip=False,
     sharded_ddp=[],
     deepspeed=None,
-    label_smoothing_factor=0.1,
+    label_smoothing_factor=0.0,
     adafactor=False,
     group_by_length=False,
     length_column_name="length",
@@ -290,7 +285,7 @@ trainer = Trainer(
     compute_metrics=compute_metrics,
 )
 #%% Training
-trainer.train(model_path=model_path if os.path.isdir(model_path) else None)
+trainer.train()
 trainer.save_model()  # Saves the tokenizer too for easy upload
 # %% Evaluation
 # results = {}
