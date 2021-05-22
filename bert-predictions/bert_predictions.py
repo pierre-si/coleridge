@@ -8,6 +8,7 @@ def local_install(path, name):
             "-m",
             "pip",
             "install",
+            "-I",
             "--no-index",
             "--find-links=" + path,
             name,
@@ -52,7 +53,7 @@ from coleridgeutils import (
 )
 
 # %% Load training args
-model_path = "../input/bert-finetuned/"
+model_path = "../input/bertfinetuned/output/"
 training_args = torch.load(model_path + "training_args.bin")
 # %% Convert publications test folder to jsonl sentences file
 publications_sentences_spacy("../input/coleridgeinitiative-show-us-the-data/test")
@@ -234,4 +235,4 @@ predictions_df = []
 for key, val in publications_labels.items():
     predictions_df.append({"Id": key, "PredictionString": "|".join(val)})
 
-pd.DataFrame(predictions_df).set_index("Id").to_csv("bert-predictions.csv")
+pd.DataFrame(predictions_df).set_index("Id").to_csv("submission.csv")
