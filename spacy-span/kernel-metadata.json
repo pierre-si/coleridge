@@ -1,0 +1,13 @@
+{
+  "id": "punderscore/spacy-span",
+  "title": "spacy-span",
+  "code_file": "spacy_span_extractor.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": ["coleridgeinitiative-show-us-the-data"],
+  "kernel_sources": ["punderscore/kaggleutils"]
+}
