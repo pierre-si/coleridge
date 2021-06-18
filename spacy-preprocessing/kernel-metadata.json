@@ -1,7 +1,7 @@
 {
-  "id": "punderscore/spacy-span",
-  "title": "spacy-span",
-  "code_file": "spacy_span_extractor.py",
+  "id": "punderscore/spacy-preprocessing",
+  "title": "spacy-preprocessing",
+  "code_file": "spacy_entity_matcher.py",
   "language": "python",
   "kernel_type": "script",
   "is_private": "true",

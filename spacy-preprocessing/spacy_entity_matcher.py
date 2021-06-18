@@ -1,5 +1,11 @@
 #%%
 import subprocess, sys, os
+
+# Add utility_scripts in the current path so that they can be imported directly just like in interactive mode
+sys.path.append(os.path.abspath("../usr/lib/"))
+for script_folder in os.listdir("../usr/lib/"):
+    sys.path.append(os.path.abspath("../usr/lib/" + script_folder))
+
 from kaggleutils import upgrade
 
 
@@ -35,49 +41,20 @@ from spacy.training.iob_utils import doc_to_biluo_tags
 from tqdm import tqdm
 
 logging.basicConfig(
-    filename="spacy-biluo.log",
+    filename="spacy-preprocessing.log",
     encoding="utf-8",
     format="%(asctime)s %(levelname)s:%(message)s",
 )
-#%%
-iob_map = {0: "", 1: "I-D", 2: "O", 3: "B-D"}
-
-
-def publication_iob(publication_path, dataset_labels):
-    """Tokenize and find occurrences of dataset_labels in the publication texts.
-    output: jsonl of the publication with keys 'Id', 'section_title', 'sentence', 'tokens', 'ner_tags' (IOB2)
-    """
-    nlp = spacy.load("en_core_web_sm")
-    nlp.select_pipes(enable="")
-    ruler = nlp.add_pipe("entity_ruler")
-    patterns = [{"label": "DATASET", "pattern": label} for label in dataset_labels]
-    ruler.add_patterns(patterns)
-
-    output = []
-    with open(publication_path, "r") as f:
-        publication = json.load(f)
-
-    for section in publication:
-        entry = {"Id": publication_path.stem, "section_title": section["section_title"]}
-        sentences = nltk.tokenize.sent_tokenize(section["text"])
-        for sentence in sentences:
-            doc = nlp(sentence)
-            entry["sentence"] = doc.text
-            entry["tokens"] = [token.text for token in doc]
-            entry["ner_tags"] = list(map(iob_map.get, doc.to_array("ENT_IOB").tolist()))
-            output.append(entry.copy())
-    return output
-
-
-# With "Beginning Postsecondary Student" and "Beginning Postsecondary Students" as matching terms
-# and the same two strings in the text, spacy's phraseMatcher reports 2 matching (but we could expect 3),
-# but with "Beginning Postsecondary Student" and "Beginning Postsecondary" as matching terms, it reports 4 matching (but we could expect 2 like above).
-# the entity ruler seems to deal better with these cases.
 # %%
 
 
-def publication_biluo(publication_path, dataset_labels):
+def extract_datasets(publication_path, dataset_labels, target_type):
     """Tokenize and find occurrences of dataset_labels in the publication texts.
+    target_type: one of
+        'text': target: 'dataset_label1 | dataset_label2…'
+        'span': start: 2, end: 8 (reports only the first dataset found in the chunk)
+        'biluo': ner_tags: ['O', 'B', 'I', 'I', 'L', 'O']
+
     output: jsonl of the publication with keys 'Id', 'section_title', 'text', 'tokens', 'ner_tags' (BILUO)
     """
     nlp = spacy.load("en_core_web_sm")
@@ -119,16 +96,27 @@ def publication_biluo(publication_path, dataset_labels):
             span = doc[part_start:part_end]
             entry["text"] = span.text
             entry["tokens"] = [token.text for token in span]
-            entry["ner_tags"] = doc_to_biluo_tags(span.as_doc())
+            if target_type == "biluo":
+                entry["ner_tags"] = doc_to_biluo_tags(span.as_doc())
+            elif target_type == "span":
+                if len(span.ents) == 0:
+                    entry["start"] = 0
+                    entry["end"] = 0
+                else:  # ! takes only the first entity
+                    entry["start"] = span.ents[0].start
+                    entry["end"] = span.ents[0].end
+            else:
+                entry["target"] = " | ".join([ent.text for ent in span.ents])
+
             entry["ent_count"] = len(span.ents)
-            entry["ents"] = [ent.text for ent in span.ents]
+            # entry["ents"] = [ent.text for ent in span.ents]
             output.append(entry.copy())
             part_start = part_end
     return output
 
 
 # %%
-def process_folder(folder_path, train_df):
+def process_folder(folder_path, train_df, target_type="text"):
     publications = Path(folder_path).iterdir()
 
     global_df = pd.DataFrame()
@@ -136,7 +124,7 @@ def process_folder(folder_path, train_df):
         labels = np.unique(
             df[df["Id"] == p.stem][["dataset_title", "dataset_label"]].values.ravel()
         )
-        output = publication_biluo(p, labels)
+        output = extract_datasets(p, labels, target_type=target_type)
         p_df = pd.DataFrame(output)
         global_df = global_df.append(p_df)
 
@@ -152,7 +140,7 @@ def process_folder(folder_path, train_df):
 
 #%%
 df = pd.read_csv(config["path_to_csv"])
-process_folder(config["path_to_publications"], df)
+process_folder(config["path_to_publications"], df, target_type="text")
 # %% COMPARISON WITH BERT PRETOKENIZER
 # from tokenizers.pre_tokenizers import BertPreTokenizer
 
