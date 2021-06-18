@@ -19,22 +19,19 @@ from transformers import (
     AutoModelForTokenClassification,
     AutoTokenizer,
     DataCollatorForTokenClassification,
-    # HfArgumentParser,
-    # PreTrainedTokenizerFast,
     Trainer,
     TrainingArguments,
-    # set_seed,
 )
 from transformers.training_args import IntervalStrategy, SchedulerType
 
 from coleridgeutils import coleridge_fscore, clean_text
 
 # %% Load training args
-model_path = "../output/subset/runs/May05_21-03-23_debian/output/"
+model_path = "../output/bert-finetuning_kaggle/output/"
 training_args = torch.load(model_path + "training_args.bin")
 #%% Get the datasets
-train_file = "../input/subset_pub-split/biluo/ner_train_downsampled.json"
-validation_file = "../input/subset_pub-split/biluo/ner_val.json"
+train_file = "../input/coleridgebiluodownsampled/ner_train_downsampled.json"
+validation_file = "../input/coleridgebiluodownsampled/ner_val.json"
 
 data_files = {}
 data_files["train"] = train_file
@@ -176,7 +173,7 @@ trainer = Trainer(
     compute_metrics=compute_metrics,
 )
 # %%
-test_dataset = tokenized_datasets["train"]
+test_dataset = tokenized_datasets["validation"]
 predictions, labels, metrics = trainer.predict(test_dataset)
 #%%
 probas = softmax(predictions, axis=2)
@@ -195,7 +192,7 @@ true_probas = [
 
 # %% add predicted tags and associated probabilities to the dataset
 # updated_dataset = datasets['test'].map(lambda example: {'bert_tags': })
-updated_dataset = datasets["train"].add_column("bert_tags", true_predictions)
+updated_dataset = datasets["validation"].add_column("bert_tags", true_predictions)
 updated_dataset = updated_dataset.add_column("bert_probas", true_probas)
 #%%
 import spacy
@@ -209,7 +206,7 @@ preds = []
 truths = []
 publications_labels = {}
 for example in updated_dataset:
-    doc = nlp(example["sentence"])
+    doc = nlp(example["text"])
     try:
         # use iob_to_biluo before calling biluo_tags_to_spans
         ents_span = biluo_tags_to_spans(doc, example["bert_tags"])

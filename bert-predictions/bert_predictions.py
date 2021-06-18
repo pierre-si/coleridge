@@ -1,4 +1,10 @@
 import os
+
+# Add utility_scripts in the current path so that they can be imported directly just like in interactive mode
+sys.path.append(os.path.abspath("../usr/lib/"))
+for script_folder in os.listdir("../usr/lib/"):
+    sys.path.append(os.path.abspath("../usr/lib/" + script_folder))
+
 from kaggleutils import offline_install
 
 loc = os.environ.get("KAGGLE_KERNEL_RUN_TYPE", "Localhost")
