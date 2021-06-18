@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # coding=utf-8
 # Copyright 2020 The HuggingFace Team All rights reserved.
 #
@@ -328,11 +327,8 @@ def main():
             data_files["test"] = data_args.test_file
             extension = data_args.test_file.split(".")[-1]
         datasets = load_dataset(
-            extension,
-            data_files=data_files,
-            field="data",
-            cache_dir=model_args.cache_dir,
-        )
+            extension, data_files=data_files, cache_dir=model_args.cache_dir
+        )  # field="data" is for json files with a single root dic where the dataset is contained in a specific field.
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
@@ -383,9 +379,11 @@ def main():
         column_names = datasets["validation"].column_names
     else:
         column_names = datasets["test"].column_names
-    question_column_name = "question" if "question" in column_names else column_names[0]
-    context_column_name = "context" if "context" in column_names else column_names[1]
-    answer_column_name = "answers" if "answers" in column_names else column_names[2]
+    # question_column_name = "question" if "question" in column_names else column_names[0]
+    # context_column_name = "context" if "context" in column_names else column_names[1]
+    # answer_column_name = "answers" if "answers" in column_names else column_names[2]
+    context_column_name = "text"
+    answer_column_name = "target"
 
     # Padding side determines if we do (question|context) or (context|question).
     pad_on_right = tokenizer.padding_side == "right"
@@ -403,14 +401,16 @@ def main():
         # in one example possible giving several features when a context is long, each of those features having a
         # context that overlaps a bit the context of the previous feature.
         tokenized_examples = tokenizer(
-            examples[question_column_name if pad_on_right else context_column_name],
-            examples[context_column_name if pad_on_right else question_column_name],
+            # examples[question_column_name if pad_on_right else context_column_name],
+            # examples[context_column_name if pad_on_right else question_column_name],
+            examples[context_column_name],
             truncation="only_second" if pad_on_right else "only_first",
             max_length=max_seq_length,
             stride=data_args.doc_stride,
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
             padding="max_length" if data_args.pad_to_max_length else False,
+            is_split_into_words=True,
         )
 
         # Since one example might give us several features if it has a long context, we need a map from a feature to
@@ -694,23 +694,6 @@ def main():
 
         trainer.log_metrics("predict", metrics)
         trainer.save_metrics("predict", metrics)
-
-    if training_args.push_to_hub:
-        kwargs = {
-            "finetuned_from": model_args.model_name_or_path,
-            "tasks": "question-answering",
-        }
-        if data_args.dataset_name is not None:
-            kwargs["dataset_tags"] = data_args.dataset_name
-            if data_args.dataset_config_name is not None:
-                kwargs["dataset_args"] = data_args.dataset_config_name
-                kwargs[
-                    "dataset"
-                ] = f"{data_args.dataset_name} {data_args.dataset_config_name}"
-            else:
-                kwargs["dataset"] = data_args.dataset_name
-
-        trainer.push_to_hub(**kwargs)
 
 
 def _mp_fn(index):
